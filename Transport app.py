@@ -23,15 +23,15 @@ import os
 
 address=os.getcwd()
 
-tram="Tramway"
-metro="Metro"
+tram="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/42fb8204a19b90c2ec71d41685e84935ce9545b0/Tramway.xlsx"
+metro="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/42fb8204a19b90c2ec71d41685e84935ce9545b0/Metro.xlsx"
 
-df_DataBase=pd.read_excel(os.path.join(address, f"{tram}.xlsx"),sheet_name="DataBase")
-df_Current=pd.read_excel(os.path.join(address, f"{tram}.xlsx"),sheet_name="Current")
-df_Metro=pd.read_excel(os.path.join(address, f"{metro}.xlsx"),sheet_name="List")
-df_Develop=pd.read_excel(os.path.join(address, f"{tram}.xlsx"),sheet_name="Developing")
-df_Counries=pd.read_excel(os.path.join(address, f"{tram}.xlsx"),sheet_name="Countries")
-df_Continents=pd.read_excel(os.path.join(address, f"{tram}.xlsx"),sheet_name="Continents")
+df_DataBase=pd.read_excel(tram,sheet_name="DataBase")
+df_Current=pd.read_excel(tram,sheet_name="Current")
+df_Metro=pd.read_excel(metro,sheet_name="List")
+df_Develop=pd.read_excel(tram,sheet_name="Developing")
+df_Counries=pd.read_excel(tram,sheet_name="Countries")
+df_Continents=pd.read_excel(tram,sheet_name="Continents")
 
 
 # ### Prepare df_Sure
