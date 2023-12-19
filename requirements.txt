@@ -1,2 +1,3 @@
+requests
 dash
 dash_bootstrap_components
