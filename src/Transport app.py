@@ -560,7 +560,7 @@ dashboard6_layout = html.Div([
                 dbc.Col([
                     html.H3("Dr.Shahabeddin Kermanshahi",className="text-info"),
                     html.Img(src="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/1efcf286843fdc798cbffef45274aded7fca3f12/assets/about/dr Kermanshahi-prof.jpg",height=200,width=200),
-                    html.P("Ph.D. inTransportation Planning")
+                    html.P("Ph.D. inTransportation Planning"),
                     html.P("faculty member of urban planning department,  University of Tehran"),
                     html.A("contact with Email",href="https://rtis2.ut.ac.ir/cv/shkermanshahi/?lang=en-gb",target="_blank"),
                 ]), 
