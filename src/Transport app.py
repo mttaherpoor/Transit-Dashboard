@@ -5,23 +5,20 @@
 
 # ## Import Libaries 
 
-# In[2]:
+# In[1]:
 
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import os
 
 
 # ## Data
 
 # ### Create DataFrames 
 
-# In[3]:
+# In[62]:
 
-
-address=os.getcwd()
 
 tram="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/5aed793be10a3c2905c7ca23ed6ff64af2e2f972/Datasets/Tramway.xlsx"
 metro="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/5aed793be10a3c2905c7ca23ed6ff64af2e2f972/Datasets/Metro.xlsx"
@@ -36,7 +33,7 @@ df_Continents=pd.read_excel(tram,sheet_name="Continents")
 
 # ### Prepare df_Sure
 
-# In[6]:
+# In[63]:
 
 
 df_Sure=df_DataBase[df_DataBase["code"]=="Sure"].copy()
@@ -46,7 +43,7 @@ df_Sure.loc[:,"Data to Final"] = df_Sure[["Date to 1", "Date to 2"]].max(axis=1)
 
 # #### Prepare df_Sure_elec
 
-# In[7]:
+# In[64]:
 
 
 system_types=list(df_Sure["Traction type"].unique())
@@ -59,7 +56,7 @@ df_Sure_elec=df_Sure[df_Sure["Traction type"].map(elec)!=-1]
 
 # ### Prepare df_Current
 
-# In[8]:
+# In[65]:
 
 
 df_Current["After 2000_Tram"]=(df_Current["Year opened"]>=2000)
@@ -72,7 +69,7 @@ df_Current=df_Current[df_Current["Operation code "]<5]
 
 # ### Prepare df_Metro
 
-# In[9]:
+# In[66]:
 
 
 df_Metro["After 2000_Metro"]=(df_Metro['Service opened']>=2000)
@@ -81,20 +78,18 @@ df_Metro["After 2000_Metro"]=df_Metro["After 2000_Metro"].apply(lambda x:"After 
 
 # ### Prepare df of cities
 
-# In[10]:
+# In[67]:
 
-
-df_Current["Population"] = df_Current["Population"].replace({',': '', '\xa0': ''}, regex=True).astype(float)
 
 #city_Tramway
 
-tram_cols=["City","Country", "Population","Continent","Developing","Year opened","Start Operation","lan","lat","After 2000_Tram"]
+tram_cols=["City","Country", "Population","Continent","Class","Year opened","Start Operation","lon","lat","After 2000_Tram"]
 city_Tramway = df_Current.groupby(tram_cols)["length (km)"].sum().reset_index()
 city_Tramway.rename(columns={"length (km)":"length_Tramway"},inplace=True)
 city_Tramway["length_per_capita_Tramway"] = city_Tramway["length_Tramway"] / city_Tramway["Population"] * 100000
 
 #df_metro
-metro_cols=["City","Country", "Population","Continent","Service opened","lan","lat","Developing","After 2000_Metro"]
+metro_cols=["City","Country", "Population","Continent","Service opened","lon","lat","Class","After 2000_Metro"]
 df_Metro["Population"] = df_Metro["Population"].replace({',': '', '\xa0': ''}, regex=True).astype(float)
 city_metro = df_Metro.groupby(metro_cols)["length(km)"].sum().reset_index()
 city_metro.rename(columns={"length(km)":"length_Metro"},inplace=True)
@@ -102,7 +97,7 @@ city_metro["length_per_capita_Metro"] = city_metro["length_Metro"] / city_metro[
 
 
 
-df_city=city_Tramway.merge(city_metro, how="outer",on=["City","Country","Population","Continent","lat","lan","Developing"])
+df_city=city_Tramway.merge(city_metro, how="outer",on=["City","Country","Population","Continent","lat","lon","Class"])
 df_city["length_per_capita"]=df_city["length_per_capita_Tramway"].fillna(0)+df_city["length_per_capita_Metro"].fillna(0)
 df_city["length"]=df_city["length_Tramway"].fillna(0)+df_city["length_Metro"].fillna(0)
 
@@ -147,7 +142,7 @@ df_city["length_per_capita"]=pd.to_numeric(df_city["length_per_capita"],errors="
 
 # ####  Prepare  def Timeline
 
-# In[11]:
+# In[72]:
 
 
 def Timeline(df,args):
@@ -209,7 +204,7 @@ df_Timeline_Metro=Timeline(df_Metro,col_metro)
 
 # ####  Prepare Timeline Total
 
-# In[12]:
+# In[73]:
 
 
 df_Timeline_Tram=df_Timeline_Tram_Sure_elec.merge(df_Timeline_Tram_Current,on=["Country","Decade","Continent"],how="outer")
@@ -245,7 +240,7 @@ df_Timeline_Total_Continent.drop(columns=col_to_drop,inplace=True)
 
 # # New dash
 
-# In[24]:
+# In[80]:
 
 
 import dash
@@ -257,7 +252,6 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import re
 import random
-import os
 import requests
 
 app = dash.Dash(__name__, 
@@ -283,7 +277,7 @@ if response.status_code==200:
     for im in img:
         image_url=f"https://raw.githubusercontent.com/{github_repo}/{github_branch}/{im}"
         image_path.append(image_url)
-        
+
 random.shuffle(image_paths)
 image_name = os.path.splitext(os.path.basename(image_paths[0]))[0]
 
@@ -343,7 +337,7 @@ def create_plotly_stripplot(df, x, y, color, title, xaxis, yaxis):
                    category_orders={y: sorted(df[y].unique())},
                    color_discrete_map={True: 'darkorange', False: 'royalblue'},
                    template="plotly_dark",
-                   hover_data=["City","Country","Population"],
+                   hover_data=["Country","City","Population"],
                    facet_col_spacing=0.1,
                    width=1200,  # Adjust width as needed
                    height=800,
@@ -413,13 +407,13 @@ def plot_city_map(df):
     # Create a scattermapbox plot
     fig = px.scatter_mapbox(df,
                             lat='lat',
-                            lon='lan',
+                            lon='lon',
                             color='type',
                             color_discrete_map={'Tram': 'red', 'Metro': 'blue', 'Tram/Metro': 'purple'},
                             size_max=15,
                             zoom=1.5,
                             mapbox_style='carto-darkmatter',
-                            hover_data=["City","Country","Population","length"],
+                            hover_data=["Country","City","Population","length"],
                             width=1200,
                             height=800,
                             
@@ -435,7 +429,6 @@ def plot_city_map(df):
     )
 
     return fig
-
 
 
 ########@########################layout#######################################
@@ -567,6 +560,7 @@ dashboard6_layout = html.Div([
                 dbc.Col([
                     html.H3("Dr.Shahabeddin Kermanshahi",className="text-info"),
                     html.Img(src="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/1efcf286843fdc798cbffef45274aded7fca3f12/assets/about/dr Kermanshahi-prof.jpg",height=200,width=200),
+                    html.P("Ph.D. inTransportation Planning")
                     html.P("faculty member of urban planning department,  University of Tehran"),
                     html.A("contact with Email",href="https://rtis2.ut.ac.ir/cv/shkermanshahi/?lang=en-gb",target="_blank"),
                 ]), 
@@ -610,15 +604,13 @@ dashboard6_layout = html.Div([
                     html.P([
                         html.A("Dr. Morteza Jaberi", href="https://rtis2.ut.ac.ir/cv/hjaberi/?lang=en-gb", target="_blank"),
                         ", ",
-                        html.A("Dr. Nahid Nemati", href="https://www.linkedin.com/in/nahid-nematikutenaee-a5ba1039/", target="_blank"),
-                        ", ",
-                        html.A("Dr. Ali Tayebi", href="https://github.com/alitayebi", target="_blank"),
-                        ", ", 
+                        html.A("Dr. Nahid Nemati", href="https://github.com/GISwithTisa", target="_blank"),
+                        ", ",                      
                         html.A("Eng. Keinaz Nourizadeh", href="https://www.linkedin.com/in/keinaznourizadeh/",target="_blank"),
                         ", ",
-                        html.A("Eng. Alireza Fallah", href="https://www.linkedin.com/in/alireza-fallahsoltani-b44b161ba?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app", target="_blank"),
+                        html.A("Eng. Alireza Fallah", href="https://www.linkedin.com/in/alireza-fallahsoltani/", target="_blank"),
                         ", ",
-                        html.A("Eng. Farahnaz Zarrin Nam", href="https://www.linkedin.com/in/farahnaz-zarrinnam-70942b199?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",target="_blank"),
+                        html.A("Eng. Farahnaz Zarrin Nam", href="https://www.linkedin.com/in/farahnaz-zarrinnam/",target="_blank"),
                     ])
             ])
                 
@@ -681,7 +673,7 @@ for position in ["left","right"]:
             tram_length = filter_data['length_Tramway'].iloc[0]
             metro_length = filter_data['length_Metro'].iloc[0]
             population = filter_data["Population"].iloc[0]
-            developed = filter_data["Developing"].iloc[0]
+            developed = filter_data["Class"].iloc[0]
 
             if (filter_data['length_Tramway'] == 0).all():
                 start_tram, start_operat = "Not Started", "Not Started"
@@ -713,7 +705,7 @@ for position in ["left","right"]:
             tram_length = filter_data['length_Tramway'].sum()
             metro_length = filter_data['length_Metro'].sum()
             population = filter_data["Population_Country"].iloc[0]
-            developed = filter_data["Developing"].iloc[0]
+            developed = filter_data["Class"].iloc[0]
 
             if (filter_data['length_Tramway'] == 0).all():
                 start_tram, start_operat = "Not Started", "Not Started"
@@ -745,8 +737,8 @@ for position in ["left","right"]:
             metro_length = filter_data['length_Metro'].sum()
             population = filter_data["Population_Continent"].iloc[0]
 
-            developed_count = filter_data[filter_data['Developing'] == 'Developed']['Country'].nunique()
-            developing_count = filter_data[filter_data['Developing'] == 'Developing']['Country'].nunique()
+            developed_count = filter_data[filter_data['Class'] == 'Developed']['Country'].nunique()
+            developing_count = filter_data[filter_data['Class'] == 'Developing']['Country'].nunique()
 
             if (filter_data['length_Tramway'] == 0).all():
                 start_tram, start_operat = "Not Started", "Not Started"
@@ -1029,8 +1021,8 @@ def update_line_chart(clicked_data, selected_years, transport_type):
         (df_filtered["Count"].notnull())
     ]
     fig = px.line(filtered_country, x='Decade', y='Count',
-                   template="plotly_dark")
-    fig.update_layout(title=dict(text=f"{transit} Sysyems in {country}", x=0.5, font=dict(color='#008080')))
+                  title=f"{transit} Sysyems in {country}", template="plotly_dark")
+    fig.update_layout(title=dict(text=f"Line Chart for {country}", x=0.5, font=dict(color='#008080')))
     return fig    
         
 #####################################################Global Charts##############################################################
@@ -1050,12 +1042,12 @@ def update_global_charts(transport_type):
         charts.append(html.Br())  # Line break
 
         charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_Tramway', "Continent",
-                                              'Developing', "Global Length of Tram",
+                                              'Class', "Global Length of Tram",
                                               "Length (km)", "Continent")))
         charts.append(html.Br())  # Line break
         
         charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_per_capita_Tramway', "Continent",
-                                              'Developing', "Global Length per capita of Trams",
+                                              'Class', "Global Length per capita of Trams",
                                               "Length Per Capita (x10^5)", "Continent")))
         charts.append(html.Br())
         df_Temp=df_city
@@ -1063,9 +1055,9 @@ def update_global_charts(transport_type):
         df_barchart= df_Temp[df_Temp["Transit"]=="Tram"]
         print()
         
-        charts.append(dcc.Graph(figure= barplot_combined(df_barchart, 'Transit', 'length_Tramway', 'Continent', 'Developing',
+        charts.append(dcc.Graph(figure= barplot_combined(df_barchart, 'Transit', 'length_Tramway', 'Continent', 'Class',
                               'Transit', 'Length', 
-                              'Length of Tram Systems', ['City', 'Country',"Population"]) ))
+                              'Length of Tram Systems', ['Country','City',"Population"]) ))
 
 
     elif transport_type == "Metro":
@@ -1076,21 +1068,21 @@ def update_global_charts(transport_type):
         charts.append(html.Br())  # Line break
 
         charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_Metro', "Continent",
-                                              'Developing', "Global Length of Metro",
+                                              'Class', "Global Length of Metro",
                                               "Length (km)", "Continent")))
         charts.append(html.Br())
         # Line break
         charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_per_capita_Metro', "Continent",
-                                              'Developing', "Global Length per capita of Metro",
+                                              'Class', "Global Length per capita of Metro",
                                               "Length Per Capita (x10^5)", "Continent")))
         charts.append(html.Br())
         df_Temp=df_city
         df_Temp["Transit"]=df_Temp.apply(isolate_transit, axis=1, transit_type="Metro")
         df_barchart= df_Temp[df_Temp["Transit"]=="Metro"]
         
-        charts.append(dcc.Graph(figure= barplot_combined(df_barchart, 'Transit', 'length_Metro', 'Continent', 'Developing',
+        charts.append(dcc.Graph(figure= barplot_combined(df_barchart, 'Transit', 'length_Metro', 'Continent', 'Class',
                               'Transit', 'Length', 
-                              'Length of Mertro Systems', ['City', 'Country',"Population"]) ))
+                              'Length of Mertro Systems', ['Country','City',"Population"]) ))
 
     # Add similar logic for BRT and Total charts here
     elif transport_type == "BRT":
@@ -1101,21 +1093,21 @@ def update_global_charts(transport_type):
         charts.append(html.Br())  # Line break
 
         #charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_BRT', "Continent",
-        #                                      'Developing', "Global Length of BRT",
+        #                                      'Class', "Global Length of BRT",
         #                                      "Length (km)", "Continent")))
         charts.append(html.Br())
         # Line break
         #charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_per_capita_BRT', "Continent",
-        #                                      'Developing', "Global Length per capita of BRT",
+        #                                      'Class', "Global Length per capita of BRT",
         #                                      "Length Per Capita (x10^5)", "Continent")))
         charts.append(html.Br())
      #   df_Temp=df_city
      #   df_Temp["Transit"]=df_Temp.apply(isolate_transit, axis=1, transit_type="BRT")
      #   df_barchart= df_Temp[df_Temp["Transit"]=="BRT"]
         
-     #   charts.append(dcc.Graph(figure= barplot_combined(df_barchart, 'Transit', 'length_BRT', 'Continent', 'Developing',
+     #   charts.append(dcc.Graph(figure= barplot_combined(df_barchart, 'Transit', 'length_BRT', 'Continent', 'Class',
      #                         'Transit', 'Length', 
-     #                         'Length of BRT Systems', ['City', 'Country',"Population"]) ))
+     #                         'Length of BRT Systems', ['Country','City',"Population"]) ))
     
     elif transport_type == "Total":
         charts.append(dcc.Graph(figure=create_plotly_lineplot(df_Timeline_Total_Continent, 'Decade', 'Count', 'Continent',
@@ -1125,12 +1117,12 @@ def update_global_charts(transport_type):
         charts.append(html.Br())  # Line break
 
         charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length', "Continent",
-                                              'Developing', "Global Length of Tram+Metro+BRT",
+                                              'Class', "Global Length of Tram+Metro+BRT",
                                               "Length (km)", "Continent")))
         charts.append(html.Br())
         
         charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_per_capita', "Continent",
-                                              'Developing', "Global Length per capita of Tram+Metro+BRT",
+                                              'Class', "Global Length per capita of Tram+Metro+BRT",
                                               "Length Per Capita (x10^5)", "Continent")))
 
         charts.append(html.Br())
@@ -1172,5 +1164,12 @@ def display_page(pathname):
    # ])
 
 if __name__ == '__main__':
-    app.run_server(debug=True,jupyter_mode="tab",port=4050)
+    app.run_server(debug=True,jupyter_mode="tab",port=2000)
+
+
+# In[75]:
+
+
+print(city_Tramway[city_Tramway.City=="London"])
+city_Tramway
 
