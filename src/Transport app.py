@@ -20,9 +20,9 @@ import matplotlib.pyplot as plt
 # In[ ]:
 
 
-tram="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/6e08394b200ac597012b386e041d85fe0066954b/Datasets/Tramway.xlsx"
-metro="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/faaea823325d996f62c41ce1b581baf2b253f988/Datasets/Metro.xlsx"
-brt="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/e4c41f15dcaaccfd62573c787f08be9c222b323c/Datasets/BRT.xlsx"
+tram="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/f41253c68590cca836c1e2e79015f657fe4cccb2/Datasets/Tramway.xlsx"
+metro="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/f41253c68590cca836c1e2e79015f657fe4cccb2/Datasets/Metro.xlsx"
+brt="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/6c25ba1c7a0090634cb90d8c248c1f7cbad7991e/Datasets/BRT.xlsx"
 
 df_DataBase=pd.read_excel(tram,sheet_name="DataBase")
 df_Current=pd.read_excel(tram,sheet_name="Current")
