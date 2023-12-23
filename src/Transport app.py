@@ -5,7 +5,7 @@
 
 # ## Import Libaries 
 
-# In[1]:
+# In[ ]:
 
 
 import numpy as np
@@ -17,11 +17,12 @@ import matplotlib.pyplot as plt
 
 # ### Create DataFrames 
 
-# In[62]:
+# In[ ]:
 
 
-tram="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/5aed793be10a3c2905c7ca23ed6ff64af2e2f972/Datasets/Tramway.xlsx"
-metro="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/5aed793be10a3c2905c7ca23ed6ff64af2e2f972/Datasets/Metro.xlsx"
+tram="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/6e08394b200ac597012b386e041d85fe0066954b/Datasets/Tramway.xlsx"
+metro="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/faaea823325d996f62c41ce1b581baf2b253f988/Datasets/Metro.xlsx"
+brt="https://raw.githubusercontent.com/mttaherpoor/Transit-Dashboard/e4c41f15dcaaccfd62573c787f08be9c222b323c/Datasets/BRT.xlsx"
 
 df_DataBase=pd.read_excel(tram,sheet_name="DataBase")
 df_Current=pd.read_excel(tram,sheet_name="Current")
@@ -29,11 +30,12 @@ df_Metro=pd.read_excel(metro,sheet_name="List")
 df_Develop=pd.read_excel(tram,sheet_name="Developing")
 df_Counries=pd.read_excel(tram,sheet_name="Countries")
 df_Continents=pd.read_excel(tram,sheet_name="Continents")
+df_BRT=pd.read_excel(brt,sheet_name="List")
 
 
 # ### Prepare df_Sure
 
-# In[63]:
+# In[ ]:
 
 
 df_Sure=df_DataBase[df_DataBase["code"]=="Sure"].copy()
@@ -43,7 +45,7 @@ df_Sure.loc[:,"Data to Final"] = df_Sure[["Date to 1", "Date to 2"]].max(axis=1)
 
 # #### Prepare df_Sure_elec
 
-# In[64]:
+# In[ ]:
 
 
 system_types=list(df_Sure["Traction type"].unique())
@@ -56,7 +58,7 @@ df_Sure_elec=df_Sure[df_Sure["Traction type"].map(elec)!=-1]
 
 # ### Prepare df_Current
 
-# In[65]:
+# In[ ]:
 
 
 df_Current["After 2000_Tram"]=(df_Current["Year opened"]>=2000)
@@ -69,80 +71,120 @@ df_Current=df_Current[df_Current["Operation code "]<5]
 
 # ### Prepare df_Metro
 
-# In[66]:
+# In[ ]:
 
 
 df_Metro["After 2000_Metro"]=(df_Metro['Service opened']>=2000)
 df_Metro["After 2000_Metro"]=df_Metro["After 2000_Metro"].apply(lambda x:"After 2000" if x == True else "Before 2000")
 
 
+# ### Prepare df_BRT
+
+# In[ ]:
+
+
+df_BRT=df_BRT[df_BRT["Calculate"]!="Don't Calculate"]
+
+df_BRT=df_BRT[df_BRT["Operation code "]==0]
+
+
 # ### Prepare df of cities
 
-# In[67]:
+# In[ ]:
 
 
-#city_Tramway
-
-tram_cols=["City","Country", "Population","Continent","Class","Year opened","Start Operation","lon","lat","After 2000_Tram"]
+# Your existing code for tramways
+tram_cols=["City","Country", "Population","Continent","Class","Start Operation","lon","lat","After 2000_Tram"]
 city_Tramway = df_Current.groupby(tram_cols)["length (km)"].sum().reset_index()
-city_Tramway.rename(columns={"length (km)":"length_Tramway"},inplace=True)
+city_Tramway.rename(columns={"length (km)":"length_Tramway"}, inplace=True)
 city_Tramway["length_per_capita_Tramway"] = city_Tramway["length_Tramway"] / city_Tramway["Population"] * 100000
 
-#df_metro
-metro_cols=["City","Country", "Population","Continent","Service opened","lon","lat","Class","After 2000_Metro"]
-df_Metro["Population"] = df_Metro["Population"].replace({',': '', '\xa0': ''}, regex=True).astype(float)
+# Calculate minimum "Year opened" for tramways for each city
+min_year_tramway = df_Current.groupby("City")["Year opened"].min().reset_index()
+city_Tramway = city_Tramway.merge(min_year_tramway, how="left", on="City")
+
+# Your existing code for metros
+metro_cols=["City","Country", "Population","Continent","lon","lat","Class","After 2000_Metro"]
 city_metro = df_Metro.groupby(metro_cols)["length(km)"].sum().reset_index()
-city_metro.rename(columns={"length(km)":"length_Metro"},inplace=True)
+city_metro.rename(columns={"length(km)":"length_Metro"}, inplace=True)
 city_metro["length_per_capita_Metro"] = city_metro["length_Metro"] / city_metro["Population"] * 100000
 
+# Calculate minimum "Service opened" for metros for each city
+min_service_opened_metro = df_Metro.groupby("City")["Service opened"].min().reset_index()
+city_metro = city_metro.merge(min_service_opened_metro, how="left", on="City")
 
+# Your existing code for BRT
+BRT_cols=["City","Country", "Population","Continent","lon","lat","Class"]
+city_BRT = df_BRT.groupby(BRT_cols)["length (km)"].sum().reset_index()
+city_BRT.rename(columns={"length (km)":"length_BRT"}, inplace=True)
+city_BRT["length_per_capita_BRT"] = city_BRT["length_BRT"] / city_BRT["Population"] * 100000
 
-df_city=city_Tramway.merge(city_metro, how="outer",on=["City","Country","Population","Continent","lat","lon","Class"])
-df_city["length_per_capita"]=df_city["length_per_capita_Tramway"].fillna(0)+df_city["length_per_capita_Metro"].fillna(0)
-df_city["length"]=df_city["length_Tramway"].fillna(0)+df_city["length_Metro"].fillna(0)
+# Calculate minimum "Year open" for BRT for each city
+min_year_open_brt = df_BRT.groupby("City")["Year open"].min().reset_index()
+city_BRT = city_BRT.merge(min_year_open_brt, how="left", on="City")
 
+# Merge tram, metro, and BRT data
+df_city = city_Tramway.merge(city_metro, how="outer", on=["City","Country","Population","Continent","lat","lon","Class"])
+df_city = pd.merge(df_city, city_BRT, how="outer", on=["City","Country","Population","Continent","lat","lon","Class"])
+
+# Combine lengths and calculate per capita values
+df_city["length_Tramway"].fillna(0, inplace=True)
+df_city["length_Metro"].fillna(0, inplace=True)
+df_city["length_BRT"].fillna(0, inplace=True)
+df_city["length_per_capita"] = df_city["length_per_capita_Tramway"].fillna(0) + df_city["length_per_capita_Metro"].fillna(0) + df_city["length_per_capita_BRT"].fillna(0)
+df_city["Total Length"] = df_city["length_Tramway"] + df_city["length_Metro"] + df_city["length_BRT"]
+
+# Fill missing values
 for col in df_city.columns:
-    if  col=="length_Tramway" or col=="length_Metro":
-        df_city[col]=df_city[col].fillna(0)
-    elif col=="Start Operation" or col=="Service opened" or col=="Year opened":
-        df_city[col]=df_city[col].fillna(0)
-         
-    df_city[col]=df_city[col].fillna("")
+    if col in ["length_Tramway", "length_Metro", "length_BRT", "Start Operation", "Service opened", "Year opened", "Year open"]:
+        df_city[col].fillna(0, inplace=True)
+    else:
+        df_city[col].fillna("")
 
-    
-def type_transport(row,col1,col2):
-    if row[col1] and row[col2]:
+# Define function to determine transport type
+def type_transport(row, col1, col2, col3):
+    if row[col1] and row[col2] and row[col3]:
+        return "Tram/Metro/BRT"
+    elif row[col1] and row[col2] and row[col3] == 0:
         return "Tram/Metro"
-    elif row[col1] and row[col2]==0:
+    elif row[col1] and row[col3] and row[col2] == 0:
+        return "Tram/BRT"
+    elif row[col1] and row[col2] == 0 and row[col3] == 0:
         return "Tram"
-    elif row[col2] and row[col1]==0:
+    elif row[col2] and row[col3] and row[col1] == 0:
+        return "Metro/BRT"
+    elif row[col2] and row[col3] == 0 and row[col1] == 0:
         return "Metro"
-    else :
+    elif row[col2] == 0 and row[col3] and row[col1] == 0:
+        return "BRT"
+    else:
         return 1
-    
-    
-df_city.loc[:,"type"]=df_city.apply(lambda row :type_transport(row,"length_Tramway","length_Metro"),axis=1)
 
-df_city=df_city.merge(df_Counries,on="Country",how="left")
-df_city=df_city.merge(df_Continents,on="Continent",how="left")
-df_city.rename(columns={"Population_x":"Population","Population_y":"Population_Country","Population":"Population_Continent"},inplace=True)
-df_city.drop(columns=["row_x","row_y"],inplace=True)
+# Apply transport type function
+df_city["type"] = df_city.apply(lambda row: type_transport(row, "length_Tramway", "length_Metro", "length_BRT"), axis=1)
+
+# Merge with additional data
+df_city = df_city.merge(df_Counries, on="Country", how="left")
+df_city = df_city.merge(df_Continents, on="Continent", how="left")
+df_city.rename(columns={"Population_x": "Population", "Population_y": "Population_Country", "Population": "Population_Continent"}, inplace=True)
+df_city.drop(columns=["row_x", "row_y"], inplace=True)
 df_city['length_Tramway'] = pd.to_numeric(df_city['length_Tramway'], errors='coerce')
 df_city['length_Metro'] = pd.to_numeric(df_city['length_Metro'], errors='coerce')
 
+df_city["Service opened"] = df_city["Service opened"].astype(int)
+df_city["Year opened"] = df_city["Year opened"].astype(int)
+df_city["Start Operation"] = df_city["Start Operation"].astype(int)
+df_city["Year open"] = df_city["Year open"].astype(int)
 
-df_city["Service opened"]=df_city["Service opened"].astype(int) 
-df_city["Year opened"]=df_city["Year opened"].astype(int)         
-df_city["Start Operation"]=df_city["Start Operation"].astype(int)
 
-df_city["length_per_capita"]=pd.to_numeric(df_city["length_per_capita"],errors="coerce")
+df_city["length_per_capita"] = pd.to_numeric(df_city["length_per_capita"], errors="coerce")
 
 
 # ### Timeline
 
 # ####  Prepare  def Timeline
 
-# In[72]:
+# In[ ]:
 
 
 def Timeline(df,args):
@@ -201,10 +243,14 @@ df_Metro.loc[:,"Date to"]=2024
 col_metro=["Service opened","Date to"]
 df_Timeline_Metro=Timeline(df_Metro,col_metro)
 
+df_BRT.loc[:,"Date to"]=2024
+col_BRT=["Year open","Date to"]
+df_Timeline_BRT=Timeline(df_BRT,col_BRT)
+
 
 # ####  Prepare Timeline Total
 
-# In[73]:
+# In[ ]:
 
 
 df_Timeline_Tram=df_Timeline_Tram_Sure_elec.merge(df_Timeline_Tram_Current,on=["Country","Decade","Continent"],how="outer")
@@ -219,18 +265,33 @@ df_Timeline_Tram=df_Timeline_Tram.merge(df_Counries,on="Country")
 df_Timeline_Metro_Continent=df_Timeline_Metro.groupby(["Continent", 'Decade'])['Count'].sum().reset_index()
 df_Timeline_Metro=df_Timeline_Metro.merge(df_Counries,on="Country")
 
+df_Timeline_BRT_Continent=df_Timeline_BRT.groupby(["Continent", 'Decade'])['Count'].sum().reset_index()
+df_Timeline_BRT=df_Timeline_BRT.merge(df_Counries,on="Country")
+
 col_to_merge=["Country","Continent","Country code"]
 #df_Timeline=pd.merge(df_Timeline_Tram,df_Timeline_Metro,on=col_to_merge,suffixes=(" Tram"," Metro"),how="left")
 
 df_Timeline_Tram=df_Timeline_Tram.sort_values(by=["Country","Continent","Decade"])
 df_Timeline_Metro=df_Timeline_Metro.sort_values(by=["Country","Continent","Decade"])
+df_Timeline_BRT=df_Timeline_BRT.sort_values(by=["Country","Continent","Decade"])
 
 df_Timeline_Metro.loc[:,"type"]="Metro"
 
 df_Timeline_Tram.loc[:,"type"]="Tramway"
 
+df_Timeline_BRT.loc[:,"type"]="Metro"
+
 df_Timeline_Total_Continent=df_Timeline_Tram_Continent.merge(df_Timeline_Metro_Continent
                                                              ,on=["Continent","Decade"],how="outer")
+
+
+df_Timeline_Total_Continent["Count"]=df_Timeline_Total_Continent["Count_x"].fillna(0)+df_Timeline_Total_Continent["Count_y"].fillna(0)
+col_to_drop=["Count_x","Count_y"]
+df_Timeline_Total_Continent.drop(columns=col_to_drop,inplace=True)
+
+df_Timeline_Total_Continent=df_Timeline_Total_Continent.merge(df_Timeline_BRT_Continent
+                                                             ,on=["Continent","Decade"],how="outer")
+
 df_Timeline_Total_Continent["Count"]=df_Timeline_Total_Continent["Count_x"].fillna(0)+df_Timeline_Total_Continent["Count_y"].fillna(0)
 col_to_drop=["Count_x","Count_y"]
 df_Timeline_Total_Continent.drop(columns=col_to_drop,inplace=True)
@@ -240,7 +301,7 @@ df_Timeline_Total_Continent.drop(columns=col_to_drop,inplace=True)
 
 # # New dash
 
-# In[80]:
+# In[ ]:
 
 
 import dash
@@ -253,6 +314,7 @@ import pandas as pd
 import re
 import random
 import requests
+import os
 
 app = dash.Dash(__name__, 
                 suppress_callback_exceptions=True,
@@ -270,13 +332,13 @@ github_folder_path="assets/slideshow/"
 
 github_api_url=f"https://api.github.com/repos/{github_repo}/git/trees/{github_branch}?recursive=1"
 response=requests.get(github_api_url)
-image_path=[]
+image_paths=[]
 if response.status_code==200:
     json_data=response.json()
     img=[item['path'] for item in json_data["tree"] if github_folder_path in item['path']]
     for im in img:
         image_url=f"https://raw.githubusercontent.com/{github_repo}/{github_branch}/{im}"
-        image_path.append(image_url)
+        image_paths.append(image_url)
 
 random.shuffle(image_paths)
 image_name = os.path.splitext(os.path.basename(image_paths[0]))[0]
@@ -409,11 +471,19 @@ def plot_city_map(df):
                             lat='lat',
                             lon='lon',
                             color='type',
-                            color_discrete_map={'Tram': 'red', 'Metro': 'blue', 'Tram/Metro': 'purple'},
+                            color_discrete_map={
+                                'Tram': 'red', 
+                                'Metro': 'blue',
+                                'Tram/Metro': 'purple',
+                                'BRT':"green",
+                                'Metro/BRT':'cyan ',
+                                'Tram/BRT':'yellow',
+                                'Tram/Metro/BRT':'white'                                                             
+                            },
                             size_max=15,
                             zoom=1.5,
                             mapbox_style='carto-darkmatter',
-                            hover_data=["Country","City","Population","length"],
+                            hover_data=["Country","City","Population","Total Length"],
                             width=1200,
                             height=800,
                             
@@ -669,11 +739,13 @@ for position in ["left","right"]:
     )
     def update_tram_metro_info(selected_continent, selected_country, selected_city):
         if selected_city:
-            filter_data = df_city[df_city['City'] == selected_city]
-            tram_length = filter_data['length_Tramway'].iloc[0]
+            filter_data  = df_city[df_city['City'] == selected_city]
+            tram_length  = filter_data['length_Tramway'].iloc[0]
             metro_length = filter_data['length_Metro'].iloc[0]
-            population = filter_data["Population"].iloc[0]
-            developed = filter_data["Class"].iloc[0]
+            brt_length   = filter_data['length_BRT'].iloc[0]
+            
+            population   = filter_data["Population"].iloc[0]
+            developed    = filter_data["Class"].iloc[0]
 
             if (filter_data['length_Tramway'] == 0).all():
                 start_tram, start_operat = "Not Started", "Not Started"
@@ -684,7 +756,12 @@ for position in ["left","right"]:
                 start_metro = "Not Started"
             else:
                 start_metro = filter_data.loc[filter_data['length_Metro'] != 0, 'Service opened'].min()
-
+            if (filter_data['length_BRT'] == 0).all():
+                start_BRT = "Not Started"
+            else:
+                start_BRT = filter_data.loc[filter_data['length_BRT'] != 0, 'Year open'].min()
+                
+                
             select = selected_city
 
             return dbc.Card([
@@ -698,15 +775,20 @@ for position in ["left","right"]:
                     html.H3("Metro:"),
                     html.P(f"Year of Metro Start: {start_metro}"),
                     html.P(f"Total Metro Length: {metro_length:.2f} km"),
+                    html.H3("BRT:"),
+                    html.P(f"Year of BRT Start: {start_BRT}"),
+                    html.P(f"Total BRT Length: {brt_length:.2f} km"),
                 ])
             ])
         elif selected_country:
-            filter_data = df_city[df_city['Country'] == selected_country]
-            tram_length = filter_data['length_Tramway'].sum()
+            filter_data  = df_city[df_city['Country'] == selected_country]
+            tram_length  = filter_data['length_Tramway'].sum()
             metro_length = filter_data['length_Metro'].sum()
-            population = filter_data["Population_Country"].iloc[0]
-            developed = filter_data["Class"].iloc[0]
-
+            brt_length   = filter_data['length_BRT'].sum()
+            
+            population   = filter_data["Population_Country"].iloc[0]
+            developed    = filter_data["Class"].iloc[0]
+ 
             if (filter_data['length_Tramway'] == 0).all():
                 start_tram, start_operat = "Not Started", "Not Started"
             else:
@@ -716,7 +798,11 @@ for position in ["left","right"]:
                 start_metro = "Not Started"
             else:
                 start_metro = filter_data.loc[filter_data['length_Metro'] != 0, 'Service opened'].min()
-
+            if (filter_data['length_BRT'] == 0).all():
+                start_BRT = "Not Started"
+            else:
+                start_BRT = filter_data.loc[filter_data['length_BRT'] != 0, 'Year open'].min()
+            
             select = selected_country
             return dbc.Card([
                 dbc.CardHeader(f"{select} :", className="text-success", style={'font-size': '30px'}),
@@ -729,13 +815,18 @@ for position in ["left","right"]:
                     html.H3("Metro:"),
                     html.P(f"Year of Metro Start: {start_metro}"),
                     html.P(f"Total Metro Length: {metro_length:.2f} km"),
+                    html.H3("BRT:"),
+                    html.P(f"Year of BRT Start: {start_BRT}"),
+                    html.P(f"Total BRT Length: {brt_length:.2f} km"),
                 ])
             ])
         elif selected_continent:
-            filter_data = df_city[df_city['Continent'] == selected_continent]
-            tram_length = filter_data['length_Tramway'].sum()
+            filter_data  = df_city[df_city['Continent'] == selected_continent]
+            tram_length  = filter_data['length_Tramway'].sum()
             metro_length = filter_data['length_Metro'].sum()
-            population = filter_data["Population_Continent"].iloc[0]
+            brt_length   = filter_data['length_BRT'].sum()
+            
+            population   = filter_data["Population_Continent"].iloc[0]
 
             developed_count = filter_data[filter_data['Class'] == 'Developed']['Country'].nunique()
             developing_count = filter_data[filter_data['Class'] == 'Developing']['Country'].nunique()
@@ -749,6 +840,10 @@ for position in ["left","right"]:
                 start_metro = "Not Started"
             else:
                 start_metro = filter_data.loc[filter_data['length_Metro'] != 0, 'Service opened'].min()
+            if (filter_data['length_BRT'] == 0).all():
+                start_BRT = "Not Started"
+            else:
+                start_BRT = filter_data.loc[filter_data['length_BRT'] != 0, 'Year open'].min()
             select = selected_continent
 
             return dbc.Card([
@@ -762,6 +857,9 @@ for position in ["left","right"]:
                     html.H3("Metro:"),
                     html.P(f"Year of Metro Start: {start_metro}"),
                     html.P(f"Total Metro Length: {metro_length:.2f} km"),
+                    html.H3("BRT:"),
+                    html.P(f"Year of BRT Start: {start_BRT}"),
+                    html.P(f"Total BRT Length: {brt_length:.2f} km"),
                 ])
             ])
         else:
@@ -900,8 +998,8 @@ def update_timeline_slider(transport_type):
         min_year = df_Timeline_Metro["Decade"].min()
         max_year = df_Timeline_Metro["Decade"].max()
     elif transport_type == "BRT":
-        min_year = df_Timeline_Metro["Decade"].min()
-        max_year = df_Timeline_Metro["Decade"].max()
+        min_year = df_Timeline_BRT["Decade"].min()
+        max_year = df_Timeline_BRT["Decade"].max()
     else:
         min_year, max_year = 0, 0
 
@@ -1020,9 +1118,8 @@ def update_line_chart(clicked_data, selected_years, transport_type):
         (df_filtered["Country"] == country) &
         (df_filtered["Count"].notnull())
     ]
-    fig = px.line(filtered_country, x='Decade', y='Count',
-                  title=f"{transit} Sysyems in {country}", template="plotly_dark")
-    fig.update_layout(title=dict(text=f"Line Chart for {country}", x=0.5, font=dict(color='#008080')))
+    fig = px.line(filtered_country, x='Decade', y='Count', template="plotly_dark")
+    fig.update_layout(title=dict(text=f"{transit} Sysyems in {country}", x=0.5, font=dict(color='#008080')))
     return fig    
         
 #####################################################Global Charts##############################################################
@@ -1087,27 +1184,27 @@ def update_global_charts(transport_type):
     # Add similar logic for BRT and Total charts here
     elif transport_type == "BRT":
                
-        #charts.append(dcc.Graph(figure=create_plotly_lineplot(df_Timeline_BRT_Continent, 'Decade', 'Count', 'Continent',
-        #                                     'Number of Systems in Decades BRT',
-        #                                     "Decade", 'Number of Systems')))
+        charts.append(dcc.Graph(figure=create_plotly_lineplot(df_Timeline_BRT_Continent, 'Decade', 'Count', 'Continent',
+                                             'Number of Systems in Decades BRT',
+                                             "Decade", 'Number of Systems')))
         charts.append(html.Br())  # Line break
 
-        #charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_BRT', "Continent",
-        #                                      'Class', "Global Length of BRT",
-        #                                      "Length (km)", "Continent")))
+        charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_BRT', "Continent",
+                                             'Class', "Global Length of BRT",
+                                             "Length (km)", "Continent")))
         charts.append(html.Br())
-        # Line break
-        #charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_per_capita_BRT', "Continent",
-        #                                      'Class', "Global Length per capita of BRT",
-        #                                      "Length Per Capita (x10^5)", "Continent")))
+      #  Line break
+        charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_per_capita_BRT', "Continent",
+                                             'Class', "Global Length per capita of BRT",
+                                             "Length Per Capita (x10^5)", "Continent")))
         charts.append(html.Br())
-     #   df_Temp=df_city
-     #   df_Temp["Transit"]=df_Temp.apply(isolate_transit, axis=1, transit_type="BRT")
-     #   df_barchart= df_Temp[df_Temp["Transit"]=="BRT"]
+        df_Temp=df_city
+        df_Temp["Transit"]=df_Temp.apply(isolate_transit, axis=1, transit_type="BRT")
+        df_barchart= df_Temp[df_Temp["Transit"]=="BRT"]
         
-     #   charts.append(dcc.Graph(figure= barplot_combined(df_barchart, 'Transit', 'length_BRT', 'Continent', 'Class',
-     #                         'Transit', 'Length', 
-     #                         'Length of BRT Systems', ['Country','City',"Population"]) ))
+        charts.append(dcc.Graph(figure= barplot_combined(df_barchart, 'Transit', 'length_BRT', 'Continent', 'Class',
+                             'Transit', 'Length', 
+                             'Length of BRT Systems', ['Country','City',"Population"]) ))
     
     elif transport_type == "Total":
         charts.append(dcc.Graph(figure=create_plotly_lineplot(df_Timeline_Total_Continent, 'Decade', 'Count', 'Continent',
@@ -1116,9 +1213,9 @@ def update_global_charts(transport_type):
       
         charts.append(html.Br())  # Line break
 
-        charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length', "Continent",
+        charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'Total Length', "Continent",
                                               'Class', "Global Length of Tram+Metro+BRT",
-                                              "Length (km)", "Continent")))
+                                              "Total Length (km)", "Continent")))
         charts.append(html.Br())
         
         charts.append(dcc.Graph(figure=create_plotly_stripplot(df_city, 'length_per_capita', "Continent",
@@ -1165,11 +1262,4 @@ def display_page(pathname):
 
 if __name__ == '__main__':
     app.run_server(debug=True,jupyter_mode="tab",port=2000)
-
-
-# In[75]:
-
-
-print(city_Tramway[city_Tramway.City=="London"])
-city_Tramway
 
