@@ -279,7 +279,7 @@ df_Timeline_Metro.loc[:,"type"]="Metro"
 
 df_Timeline_Tram.loc[:,"type"]="Tramway"
 
-df_Timeline_BRT.loc[:,"type"]="Metro"
+df_Timeline_BRT.loc[:,"type"]="BRT"
 
 df_Timeline_Total_Continent=df_Timeline_Tram_Continent.merge(df_Timeline_Metro_Continent
                                                              ,on=["Continent","Decade"],how="outer")
