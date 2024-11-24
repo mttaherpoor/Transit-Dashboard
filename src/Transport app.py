@@ -10,7 +10,6 @@
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 
 # ## Data
@@ -310,6 +309,7 @@ from dash.dependencies import Input, Output, State
 import plotly.express as px
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
+import plotly.graph_objects as go
 import pandas as pd
 import re
 import random
@@ -389,7 +389,6 @@ sidebar=dbc.Card([
                        "position":"fixed"})
 
 ######chrats
-import plotly.express as px
 
 def create_plotly_stripplot(df, x, y, color, title, xaxis, yaxis):
     fig = px.strip(df,
@@ -740,9 +739,19 @@ for position in ["left","right"]:
     def update_tram_metro_info(selected_continent, selected_country, selected_city):
         if selected_city:
             filter_data  = df_city[df_city['City'] == selected_city]
-            tram_length  = filter_data['length_Tramway'].iloc[0]
-            metro_length = filter_data['length_Metro'].iloc[0]
-            brt_length   = filter_data['length_BRT'].iloc[0]
+            tram_length = (
+                filter_data[filter_data['type'] == "Tram"]['length_Tramway'].iloc[0]
+                if not filter_data[filter_data['type'] == "Tram"].empty else 0
+            )
+            metro_length = (
+                filter_data[filter_data['type'] == "Metro"]['length_Metro'].iloc[0]
+                if not filter_data[filter_data['type'] == "Metro"].empty else 0
+            )
+             
+            brt_length   = (
+                filter_data[filter_data['type'] == "BRT"]['length_BRT'].iloc[0] 
+                if not filter_data[filter_data['type'] == "BRT"].empty else 0
+            )
             
             population   = filter_data["Population"].iloc[0]
             developed    = filter_data["Class"].iloc[0]
@@ -1261,5 +1270,5 @@ def display_page(pathname):
    # ])
 
 if __name__ == '__main__':
-    app.run_server(debug=True,jupyter_mode="tab",port=2000)
+    app.run_server(debug=True,port=2000)
 
